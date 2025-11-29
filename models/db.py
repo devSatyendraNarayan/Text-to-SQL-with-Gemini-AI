@@ -1,12 +1,21 @@
 import pyodbc
 import os
+import streamlit as st
 from dotenv import load_dotenv
 load_dotenv()
 
-SQL_SERVER = os.getenv("SQL_SERVER")
-SQL_DATABASE = os.getenv("SQL_DATABASE")
-SQL_USERNAME = os.getenv("SQL_USERNAME")
-SQL_PASSWORD = os.getenv("SQL_PASSWORD")
+# Try to get credentials from Streamlit secrets first (for cloud deployment)
+# Fall back to environment variables for local development
+try:
+    SQL_SERVER = st.secrets["SQL_SERVER"]
+    SQL_DATABASE = st.secrets["SQL_DATABASE"]
+    SQL_USERNAME = st.secrets.get("SQL_USERNAME", "")
+    SQL_PASSWORD = st.secrets.get("SQL_PASSWORD", "")
+except (KeyError, FileNotFoundError):
+    SQL_SERVER = os.getenv("SQL_SERVER")
+    SQL_DATABASE = os.getenv("SQL_DATABASE")
+    SQL_USERNAME = os.getenv("SQL_USERNAME", "")
+    SQL_PASSWORD = os.getenv("SQL_PASSWORD", "")
 
 
 def get_connection():
