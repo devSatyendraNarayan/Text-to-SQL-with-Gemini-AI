@@ -19,18 +19,44 @@ except (KeyError, FileNotFoundError):
 
 
 def get_connection():
+    """
+    Establishes a connection to the SQL Server database.
+    Raises appropriate exceptions if connection fails.
+    """
     server = SQL_SERVER
     database = SQL_DATABASE
     user = SQL_USERNAME
     password = SQL_PASSWORD
-    driver = "{ODBC Driver 17 for SQL Server}"  # Ensure this is correct for your environment
+    driver = "{ODBC Driver 17 for SQL Server}"
 
+    # Add connection timeout (30 seconds)
     if user and password:
-        conn_str = f"DRIVER={driver};SERVER={server};DATABASE={database};UID={user};PWD={password}"
+        conn_str = f"DRIVER={driver};SERVER={server};DATABASE={database};UID={user};PWD={password};Connection Timeout=30;"
     else:
-        conn_str = f"DRIVER={driver};SERVER={server};DATABASE={database};Trusted_Connection=yes;"
+        conn_str = f"DRIVER={driver};SERVER={server};DATABASE={database};Trusted_Connection=yes;Connection Timeout=30;"
 
-    return pyodbc.connect(conn_str)
+    try:
+        return pyodbc.connect(conn_str)
+    except pyodbc.OperationalError as e:
+        error_msg = str(e)
+        if "Login timeout expired" in error_msg or "HYT00" in error_msg:
+            raise ConnectionError(
+                "Database connection timeout. Please check:\n"
+                "1. SQL Server address is correct and accessible\n"
+                "2. Firewall allows connections\n"
+                "3. SQL Server is running\n"
+                "4. Network connection is stable"
+            )
+        elif "Login failed" in error_msg:
+            raise ConnectionError(
+                "Database login failed. Please check:\n"
+                "1. Username and password are correct\n"
+                "2. User has access to the database"
+            )
+        else:
+            raise ConnectionError(f"Database connection error: {error_msg}")
+    except Exception as e:
+        raise ConnectionError(f"Unexpected database error: {str(e)}")
 
 
 def execute_query(query):
